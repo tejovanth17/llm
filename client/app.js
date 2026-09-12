@@ -999,20 +999,7 @@ function setupEventListeners() {
     state.settings.provider = provider;
     state.settings.defaultModel = model;
     updateFooterBadge();
-
-    const hasKey = (provider === 'gemini' && (localStorage.getItem('aether_gemini_key') || state.settings.apiKey || state.settings.hasApiKey)) ||
-                   (provider === 'openai' && (localStorage.getItem('aether_openai_key') || state.settings.apiKey || state.settings.hasApiKey)) ||
-                   (provider === 'mock');
-
-    if ((provider === 'gemini' || provider === 'openai') && !hasKey) {
-      showToast(`ℹ️ ${model} requires an API key. Opening Settings to configure it...`, 'warning');
-      elements.providerSelect.value = provider;
-      elements.modelInput.value = model;
-      toggleProviderFieldVisibility(provider);
-      openSettingsModal();
-    } else {
-      showToast(`Switched model to ${model}`, 'info');
-    }
+    showToast(`Active model switched to ${model}`, 'info');
   });
 
   // Open / Close Settings Modal
