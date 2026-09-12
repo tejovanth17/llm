@@ -4,7 +4,9 @@ services:
     runtime: docker
     plan: free
     region: oregon
+    dockerContext: .
     dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
         value: production
@@ -14,7 +16,3 @@ services:
         sync: false
       - key: OPENAI_API_KEY
         sync: false
-    disk:
-      name: aether-data
-      mountPath: /app/server/data
-      sizeGB: 1
