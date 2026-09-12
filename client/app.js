@@ -1,5 +1,6 @@
 /**
  * AetherAI — Client Application Logic
+ * Supports Multi-User Auth, Session Isolation, and Admin Oversight Center
  */
 
 // Persona Presets
@@ -12,14 +13,22 @@ const PERSONA_PROMPTS = {
 
 // Global App State
 const state = {
+  currentUser: null,
+  authToken: localStorage.getItem('aether_auth_token') || null,
+  authMode: 'signin', // 'signin' | 'signup'
+  adminUsers: [],
+  inspectedUser: null,
+  inspectedConversations: [],
+  activeAuditSessionId: null,
+
   sessions: [],
   currentSessionId: null,
   currentMessages: [],
   settings: {
-    provider: 'mock',
+    provider: 'gemini',
     apiKey: '',
     apiBaseUrl: '',
-    defaultModel: 'mock-llm',
+    defaultModel: 'gemini-1.5-flash',
     temperature: 0.7,
     ollamaHost: 'http://localhost:11434'
   },
@@ -30,8 +39,18 @@ const state = {
   autoTTS: false
 };
 
+// Helper for authorized headers
+function getAuthHeaders() {
+  const headers = { 'Content-Type': 'application/json' };
+  if (state.authToken) {
+    headers['Authorization'] = `Bearer ${state.authToken}`;
+  }
+  return headers;
+}
+
 // DOM Elements
 const elements = {
+  // Sidebar
   sidebar: document.getElementById('sidebar'),
   sidebarToggleBtn: document.getElementById('sidebarToggleBtn'),
   sidebarCloseBtn: document.getElementById('sidebarCloseBtn'),
@@ -64,6 +83,55 @@ const elements = {
   providerBadge: document.getElementById('providerBadge'),
   footerProviderName: document.getElementById('footerProviderName'),
   footerModelName: document.getElementById('footerModelName'),
+
+  // User Profile & Auth
+  userProfileCard: document.getElementById('userProfileCard'),
+  openAuthModalBtn: document.getElementById('openAuthModalBtn'),
+  userAvatar: document.getElementById('userAvatar'),
+  userName: document.getElementById('userName'),
+  userRoleBadge: document.getElementById('userRoleBadge'),
+  adminPortalSidebarBtn: document.getElementById('adminPortalSidebarBtn'),
+  adminPortalHeaderBtn: document.getElementById('adminPortalHeaderBtn'),
+  logoutBtn: document.getElementById('logoutBtn'),
+
+  // Auth Modal
+  authModal: document.getElementById('authModal'),
+  closeAuthBtn: document.getElementById('closeAuthBtn'),
+  tabSignInBtn: document.getElementById('tabSignInBtn'),
+  tabSignUpBtn: document.getElementById('tabSignUpBtn'),
+  authForm: document.getElementById('authForm'),
+  authModalTitle: document.getElementById('authModalTitle'),
+  nameGroup: document.getElementById('nameGroup'),
+  adminSecretGroup: document.getElementById('adminSecretGroup'),
+  authNameInput: document.getElementById('authNameInput'),
+  authEmailInput: document.getElementById('authEmailInput'),
+  authPasswordInput: document.getElementById('authPasswordInput'),
+  authAdminSecretInput: document.getElementById('authAdminSecretInput'),
+  authSubmitBtn: document.getElementById('authSubmitBtn'),
+  authFeedback: document.getElementById('authFeedback'),
+
+  // Admin Modal
+  adminModal: document.getElementById('adminModal'),
+  closeAdminBtn: document.getElementById('closeAdminBtn'),
+  adminStatUsers: document.getElementById('adminStatUsers'),
+  adminStatSessions: document.getElementById('adminStatSessions'),
+  adminStatPrompts: document.getElementById('adminStatPrompts'),
+  adminStatActive: document.getElementById('adminStatActive'),
+  adminUsersView: document.getElementById('adminUsersView'),
+  adminAuditView: document.getElementById('adminAuditView'),
+  adminSearchUsersInput: document.getElementById('adminSearchUsersInput'),
+  refreshAdminBtn: document.getElementById('refreshAdminBtn'),
+  adminUsersTableBody: document.getElementById('adminUsersTableBody'),
+  backToUsersBtn: document.getElementById('backToUsersBtn'),
+  auditUserDisplayName: document.getElementById('auditUserDisplayName'),
+  auditUserEmail: document.getElementById('auditUserEmail'),
+  auditSessionCount: document.getElementById('auditSessionCount'),
+  auditSessionsList: document.getElementById('auditSessionsList'),
+  auditActiveSessionTitle: document.getElementById('auditActiveSessionTitle'),
+  auditActiveSessionMeta: document.getElementById('auditActiveSessionMeta'),
+  auditTranscriptMessages: document.getElementById('auditTranscriptMessages'),
+
+  // Settings Modal
   settingsModal: document.getElementById('settingsModal'),
   closeSettingsBtn: document.getElementById('closeSettingsBtn'),
   cancelSettingsBtn: document.getElementById('cancelSettingsBtn'),
@@ -93,6 +161,11 @@ async function initApp() {
   setupEventListeners();
   setupMarked();
   await loadSettings();
+  const isAuthenticated = await checkAuth();
+  if (!isAuthenticated) {
+    // Show auth modal on first load so users have personal profiles
+    openAuthModal('signin');
+  }
   await loadSessions();
 }
 
@@ -106,11 +179,389 @@ function setupMarked() {
 }
 
 // ============================================================================
+// User Authentication System
+// ============================================================================
+async function checkAuth() {
+  if (!state.authToken) {
+    updateUserProfileUI(null);
+    return false;
+  }
+
+  try {
+    const res = await fetch('/api/auth/me', { headers: getAuthHeaders() });
+    if (res.ok) {
+      const data = await res.json();
+      state.currentUser = data.user;
+      updateUserProfileUI(data.user);
+      return true;
+    } else {
+      state.authToken = null;
+      state.currentUser = null;
+      localStorage.removeItem('aether_auth_token');
+      updateUserProfileUI(null);
+      return false;
+    }
+  } catch (err) {
+    console.error('Auth verification error:', err);
+    updateUserProfileUI(null);
+    return false;
+  }
+}
+
+function updateUserProfileUI(user) {
+  if (user) {
+    elements.userProfileCard.classList.remove('hidden');
+    elements.openAuthModalBtn.classList.add('hidden');
+
+    // Initials
+    const initial = (user.name || user.email || 'U')[0].toUpperCase();
+    elements.userAvatar.textContent = initial;
+    elements.userName.textContent = user.name || user.email;
+    elements.userRoleBadge.textContent = user.role.toUpperCase();
+
+    if (user.role === 'admin') {
+      elements.userRoleBadge.classList.add('admin');
+      elements.adminPortalSidebarBtn.classList.remove('hidden');
+      elements.adminPortalHeaderBtn.classList.remove('hidden');
+    } else {
+      elements.userRoleBadge.classList.remove('admin');
+      elements.adminPortalSidebarBtn.classList.add('hidden');
+      elements.adminPortalHeaderBtn.classList.add('hidden');
+    }
+  } else {
+    elements.userProfileCard.classList.add('hidden');
+    elements.openAuthModalBtn.classList.remove('hidden');
+    elements.adminPortalSidebarBtn.classList.add('hidden');
+    elements.adminPortalHeaderBtn.classList.add('hidden');
+  }
+}
+
+function openAuthModal(mode = 'signin') {
+  state.authMode = mode;
+  setAuthTab(mode);
+  elements.authFeedback.className = 'modal-status-feedback hidden';
+  elements.authFeedback.textContent = '';
+  elements.authModal.classList.remove('hidden');
+}
+
+function closeAuthModal() {
+  elements.authModal.classList.add('hidden');
+}
+
+function setAuthTab(mode) {
+  state.authMode = mode;
+  if (mode === 'signin') {
+    elements.tabSignInBtn.classList.add('active');
+    elements.tabSignUpBtn.classList.remove('active');
+    elements.authModalTitle.textContent = 'Sign in to AetherAI';
+    elements.nameGroup.classList.add('hidden');
+    elements.adminSecretGroup.classList.add('hidden');
+    elements.authSubmitBtn.textContent = 'Sign In';
+  } else {
+    elements.tabSignInBtn.classList.remove('active');
+    elements.tabSignUpBtn.classList.add('active');
+    elements.authModalTitle.textContent = 'Create your Personal Profile';
+    elements.nameGroup.classList.remove('hidden');
+    elements.adminSecretGroup.classList.remove('hidden');
+    elements.authSubmitBtn.textContent = 'Create Account';
+  }
+}
+
+async function handleAuthSubmit(e) {
+  e.preventDefault();
+  const email = elements.authEmailInput.value.trim();
+  const password = elements.authPasswordInput.value;
+  const name = elements.authNameInput.value.trim();
+  const adminSecret = elements.authAdminSecretInput.value.trim();
+
+  elements.authFeedback.className = 'modal-status-feedback';
+  elements.authFeedback.textContent = 'Authenticating...';
+  elements.authFeedback.classList.remove('hidden');
+
+  try {
+    const endpoint = state.authMode === 'signin' ? '/api/auth/login' : '/api/auth/register';
+    const payload = state.authMode === 'signin'
+      ? { email, password }
+      : { email, password, name, adminSecret };
+
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Authentication failed');
+    }
+
+    // Save token
+    state.authToken = data.token;
+    state.currentUser = data.user;
+    localStorage.setItem('aether_auth_token', data.token);
+
+    updateUserProfileUI(data.user);
+    closeAuthModal();
+
+    showToast(`Welcome, ${data.user.name || data.user.email}!`, 'success');
+
+    // Reload sessions scoped to this user
+    await loadSessions();
+  } catch (err) {
+    elements.authFeedback.className = 'modal-status-feedback error';
+    elements.authFeedback.textContent = err.message;
+  }
+}
+
+async function logout() {
+  try {
+    await fetch('/api/auth/logout', {
+      method: 'POST',
+      headers: getAuthHeaders()
+    });
+  } catch (e) {}
+
+  state.authToken = null;
+  state.currentUser = null;
+  localStorage.removeItem('aether_auth_token');
+  updateUserProfileUI(null);
+
+  showToast('Logged out successfully', 'info');
+  openAuthModal('signin');
+  await loadSessions();
+}
+
+// ============================================================================
+// Administrator Oversight Center
+// ============================================================================
+async function openAdminPortal() {
+  if (!state.currentUser || state.currentUser.role !== 'admin') {
+    showToast('Administrator privileges required.', 'error');
+    return;
+  }
+
+  elements.adminModal.classList.remove('hidden');
+  elements.adminUsersView.classList.remove('hidden');
+  elements.adminAuditView.classList.add('hidden');
+
+  await loadAdminData();
+}
+
+function closeAdminPortal() {
+  elements.adminModal.classList.add('hidden');
+}
+
+async function loadAdminData() {
+  try {
+    // 1. Fetch system metrics
+    const metricsRes = await fetch('/api/admin/metrics', { headers: getAuthHeaders() });
+    if (metricsRes.ok) {
+      const m = await metricsRes.json();
+      elements.adminStatUsers.textContent = m.totalUsers || 0;
+      elements.adminStatSessions.textContent = m.totalSessions || 0;
+      elements.adminStatPrompts.textContent = m.totalPrompts || 0;
+      elements.adminStatActive.textContent = m.activeToday || 0;
+    }
+
+    // 2. Fetch users directory
+    const usersRes = await fetch('/api/admin/users', { headers: getAuthHeaders() });
+    if (usersRes.ok) {
+      state.adminUsers = await usersRes.json();
+      renderAdminUsersTable(elements.adminSearchUsersInput.value);
+    }
+  } catch (err) {
+    console.error('Admin data load error:', err);
+    showToast('Failed to load admin metrics', 'error');
+  }
+}
+
+function renderAdminUsersTable(filter = '') {
+  elements.adminUsersTableBody.innerHTML = '';
+
+  const filtered = state.adminUsers.filter(u =>
+    (u.email || '').toLowerCase().includes(filter.toLowerCase()) ||
+    (u.name || '').toLowerCase().includes(filter.toLowerCase())
+  );
+
+  if (filtered.length === 0) {
+    elements.adminUsersTableBody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:2rem;">No user profiles match your filter.</td></tr>`;
+    return;
+  }
+
+  filtered.forEach(user => {
+    const tr = document.createElement('tr');
+
+    const joinDate = user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A';
+    const roleBadge = `<span class="badge-role ${user.role}">${user.role}</span>`;
+
+    tr.innerHTML = `
+      <td>
+        <div class="table-user-cell">
+          <span class="table-user-name">${escapeHtml(user.name || 'Anonymous')}</span>
+          <span class="table-user-email">${escapeHtml(user.email)}</span>
+        </div>
+      </td>
+      <td>${roleBadge}</td>
+      <td><strong>${user.totalSessions || 0}</strong> chats</td>
+      <td><span style="color:#818cf8;font-weight:600;">${user.totalPrompts || 0}</span> prompts</td>
+      <td style="color:var(--text-muted);font-size:0.78rem;">${joinDate}</td>
+      <td>
+        <div style="display:flex; gap:0.4rem;">
+          <button class="table-action-btn inspect-user-btn" data-id="${user.id}" title="Inspect prompts and conversations">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <span>Inspect Chats</span>
+          </button>
+          ${user.role !== 'admin' ? `
+            <button class="table-action-btn delete-btn delete-user-btn" data-id="${user.id}" title="Delete user">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            </button>
+          ` : ''}
+        </div>
+      </td>
+    `;
+
+    // Bind inspect button
+    tr.querySelector('.inspect-user-btn').addEventListener('click', () => {
+      inspectUserConversations(user.id);
+    });
+
+    // Bind delete button if present
+    const delBtn = tr.querySelector('.delete-user-btn');
+    if (delBtn) {
+      delBtn.addEventListener('click', () => {
+        deleteAdminUser(user.id, user.name || user.email);
+      });
+    }
+
+    elements.adminUsersTableBody.appendChild(tr);
+  });
+}
+
+async function inspectUserConversations(userId) {
+  try {
+    const res = await fetch(`/api/admin/users/${userId}/chats`, { headers: getAuthHeaders() });
+    if (!res.ok) throw new Error('Failed to retrieve user conversation audit');
+
+    const auditData = await res.json();
+    state.inspectedUser = auditData.user;
+    state.inspectedConversations = auditData.conversations || [];
+
+    // Switch view
+    elements.adminUsersView.classList.add('hidden');
+    elements.adminAuditView.classList.remove('hidden');
+
+    elements.auditUserDisplayName.textContent = auditData.user.name || 'Anonymous User';
+    elements.auditUserEmail.textContent = `(${auditData.user.email})`;
+    elements.auditSessionCount.textContent = state.inspectedConversations.length;
+
+    renderAuditSessionsList();
+
+    if (state.inspectedConversations.length > 0) {
+      renderAuditTranscript(state.inspectedConversations[0].id);
+    } else {
+      elements.auditActiveSessionTitle.textContent = 'No conversations created yet';
+      elements.auditActiveSessionMeta.textContent = '';
+      elements.auditTranscriptMessages.innerHTML = `<div class="empty-transcript-hint">This individual has not started any conversations yet.</div>`;
+    }
+  } catch (err) {
+    console.error('Inspect error:', err);
+    showToast('Failed to inspect user chats', 'error');
+  }
+}
+
+function renderAuditSessionsList() {
+  elements.auditSessionsList.innerHTML = '';
+
+  if (state.inspectedConversations.length === 0) {
+    elements.auditSessionsList.innerHTML = `<div style="color:var(--text-muted);font-size:0.8rem;padding:0.5rem;">No chats</div>`;
+    return;
+  }
+
+  state.inspectedConversations.forEach((sess, idx) => {
+    const item = document.createElement('div');
+    item.className = `audit-session-item ${idx === 0 ? 'active' : ''}`;
+    item.dataset.id = sess.id;
+
+    const promptCount = (sess.messages || []).filter(m => m.role === 'user').length;
+    item.innerHTML = `
+      <div style="font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(sess.title || 'Untitled Chat')}</div>
+      <div style="font-size:0.7rem;color:var(--text-muted);margin-top:0.2rem;">${promptCount} prompts · ${new Date(sess.updatedAt).toLocaleDateString()}</div>
+    `;
+
+    item.addEventListener('click', () => {
+      document.querySelectorAll('.audit-session-item').forEach(i => i.classList.remove('active'));
+      item.classList.add('active');
+      renderAuditTranscript(sess.id);
+    });
+
+    elements.auditSessionsList.appendChild(item);
+  });
+}
+
+function renderAuditTranscript(sessionId) {
+  state.activeAuditSessionId = sessionId;
+  const session = state.inspectedConversations.find(s => s.id === sessionId);
+  if (!session) return;
+
+  elements.auditActiveSessionTitle.textContent = session.title || 'Untitled Conversation';
+  elements.auditActiveSessionMeta.textContent = `Model: ${session.model || 'default'} | Updated: ${new Date(session.updatedAt).toLocaleString()}`;
+  elements.auditTranscriptMessages.innerHTML = '';
+
+  const messages = session.messages || [];
+  if (messages.length === 0) {
+    elements.auditTranscriptMessages.innerHTML = `<div class="empty-transcript-hint">No messages in this chat.</div>`;
+    return;
+  }
+
+  messages.forEach(msg => {
+    const bubble = document.createElement('div');
+    bubble.className = `audit-msg-bubble ${msg.role === 'user' ? 'user' : 'assistant'}`;
+
+    const label = msg.role === 'user'
+      ? `👤 User Prompt (${new Date(msg.timestamp).toLocaleTimeString()})`
+      : `✨ Assistant Response (${new Date(msg.timestamp).toLocaleTimeString()})`;
+
+    let contentHtml = msg.role === 'user'
+      ? escapeHtml(msg.content)
+      : (window.marked ? window.marked.parse(msg.content) : escapeHtml(msg.content));
+
+    bubble.innerHTML = `
+      <div class="audit-msg-label">${label}</div>
+      <div class="markdown-body">${contentHtml}</div>
+    `;
+
+    elements.auditTranscriptMessages.appendChild(bubble);
+  });
+}
+
+async function deleteAdminUser(userId, name) {
+  if (!confirm(`Are you sure you want to permanently delete the profile of "${name}" and all their conversations?`)) return;
+
+  try {
+    const res = await fetch(`/api/admin/users/${userId}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.error || 'Failed to delete user');
+    }
+
+    showToast(`User profile deleted`, 'info');
+    await loadAdminData();
+  } catch (err) {
+    console.error('Delete user error:', err);
+    showToast(err.message, 'error');
+  }
+}
+
+// ============================================================================
 // Settings & Config
 // ============================================================================
 async function loadSettings() {
   try {
-    const res = await fetch('/api/settings');
+    const res = await fetch('/api/settings', { headers: getAuthHeaders() });
     if (!res.ok) throw new Error('Failed to load settings');
     const data = await res.json();
     state.settings = { ...state.settings, ...data };
@@ -118,14 +569,13 @@ async function loadSettings() {
     updateFooterBadge();
   } catch (err) {
     console.error('Error loading settings:', err);
-    showToast('Failed to load settings from server', 'error');
   }
 }
 
 function updateSettingsUI() {
   const { provider, apiKey, apiBaseUrl, defaultModel, temperature, ollamaHost } = state.settings;
 
-  elements.providerSelect.value = provider || 'mock';
+  elements.providerSelect.value = provider || 'gemini';
   elements.apiKeyInput.value = apiKey || '';
   elements.apiBaseUrlInput.value = apiBaseUrl || '';
   elements.ollamaHostInput.value = ollamaHost || 'http://localhost:11434';
@@ -133,10 +583,8 @@ function updateSettingsUI() {
   elements.tempRange.value = temperature ?? 0.7;
   elements.tempVal.textContent = temperature ?? 0.7;
 
-  // Toggle input visibility based on provider
   toggleProviderFieldVisibility(elements.providerSelect.value);
 
-  // Sync header model selector
   const optionVal = `${provider}:${defaultModel}`;
   const found = Array.from(elements.headerModelSelector.options).some(o => o.value === optionVal);
   if (found) {
@@ -146,9 +594,9 @@ function updateSettingsUI() {
 
 function updateFooterBadge() {
   const providerNames = {
-    mock: 'Mock Simulator',
+    mock: 'Demo Mode',
     gemini: 'Google Gemini',
-    openai: 'OpenAI / Compat',
+    openai: 'OpenAI GPT',
     ollama: 'Ollama Local'
   };
   elements.footerProviderName.textContent = providerNames[state.settings.provider] || state.settings.provider;
@@ -161,7 +609,6 @@ function toggleProviderFieldVisibility(provider) {
   if (geminiLink) geminiLink.classList.toggle('hidden', provider !== 'gemini');
   if (openaiLink) openaiLink.classList.toggle('hidden', provider !== 'openai');
 
-  // Populate stored key for this provider
   if (provider === 'gemini') {
     elements.apiKeyInput.value = localStorage.getItem('aether_gemini_key') || state.settings.apiKey || '';
   } else if (provider === 'openai') {
@@ -192,17 +639,15 @@ function toggleProviderFieldVisibility(provider) {
 // ============================================================================
 async function loadSessions() {
   try {
-    const res = await fetch('/api/sessions');
+    const res = await fetch('/api/sessions', { headers: getAuthHeaders() });
     if (!res.ok) throw new Error('Failed to load sessions');
     state.sessions = await res.json();
 
     renderSessionList();
 
     if (state.sessions.length > 0) {
-      // Pick first session by default
       await switchSession(state.sessions[0].id);
     } else {
-      // Create an initial session
       await createNewSession();
     }
   } catch (err) {
@@ -219,7 +664,7 @@ function renderSessionList(filter = '') {
   );
 
   if (filtered.length === 0) {
-    elements.sessionList.innerHTML = `<div style="color:var(--text-muted);font-size:0.8rem;padding:0.5rem;text-align:center;">No chats found</div>`;
+    elements.sessionList.innerHTML = `<div style="color:var(--text-muted);font-size:0.8rem;padding:0.5rem;text-align:center;">No conversations found</div>`;
     return;
   }
 
@@ -240,7 +685,6 @@ function renderSessionList(filter = '') {
       </div>
     `;
 
-    // Click on session to switch
     item.addEventListener('click', (e) => {
       if (e.target.closest('.session-delete-btn')) {
         e.stopPropagation();
@@ -262,7 +706,7 @@ async function createNewSession() {
     const prompt = getActiveSystemPrompt();
     const res = await fetch('/api/sessions', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       body: JSON.stringify({
         title: 'New Chat',
         systemPrompt: prompt,
@@ -297,7 +741,7 @@ async function switchSession(sessionId) {
   }
 
   try {
-    const res = await fetch(`/api/sessions/${sessionId}`);
+    const res = await fetch(`/api/sessions/${sessionId}`, { headers: getAuthHeaders() });
     if (!res.ok) throw new Error('Session not found');
     const data = await res.json();
     state.currentMessages = data.messages || [];
@@ -312,7 +756,10 @@ async function deleteSession(sessionId) {
   if (!confirm('Are you sure you want to delete this conversation?')) return;
 
   try {
-    const res = await fetch(`/api/sessions/${sessionId}`, { method: 'DELETE' });
+    const res = await fetch(`/api/sessions/${sessionId}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
     if (!res.ok) throw new Error('Failed to delete');
 
     state.sessions = state.sessions.filter(s => s.id !== sessionId);
@@ -342,7 +789,7 @@ async function renameSession() {
   try {
     const res = await fetch(`/api/sessions/${state.currentSessionId}`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       body: JSON.stringify({ title: newTitle.trim() })
     });
 
@@ -382,7 +829,7 @@ function renderMessages() {
   scrollToBottom();
 }
 
-function appendMessageDOM(msg, isStreaming = false) {
+function appendMessageDOM(msg) {
   const isUser = msg.role === 'user';
   const item = document.createElement('div');
   item.className = `message-item ${isUser ? 'user' : 'assistant'}`;
@@ -392,15 +839,10 @@ function appendMessageDOM(msg, isStreaming = false) {
     ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`
     : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`;
 
-  const authorName = isUser ? 'You' : 'AetherAI';
+  const authorName = isUser ? (state.currentUser?.name || 'You') : 'AetherAI';
   const timeFormatted = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now';
 
-  let bodyHtml = '';
-  if (isUser) {
-    bodyHtml = escapeHtml(msg.content);
-  } else {
-    bodyHtml = renderMarkdownWithCodeBlocks(msg.content);
-  }
+  let bodyHtml = isUser ? escapeHtml(msg.content) : renderMarkdownWithCodeBlocks(msg.content);
 
   item.innerHTML = `
     <div class="message-avatar">${avatarContent}</div>
@@ -423,36 +865,28 @@ function appendMessageDOM(msg, isStreaming = false) {
     </div>
   `;
 
-  // Bind toolbar actions
-  const copyBtn = item.querySelector('.copy-msg-btn');
-  copyBtn.addEventListener('click', () => {
+  item.querySelector('.copy-msg-btn').addEventListener('click', () => {
     navigator.clipboard.writeText(msg.content);
-    showToast('Message copied to clipboard', 'info');
+    showToast('Copied to clipboard', 'info');
   });
 
-  const speakBtn = item.querySelector('.speak-msg-btn');
-  speakBtn.addEventListener('click', () => {
+  item.querySelector('.speak-msg-btn').addEventListener('click', () => {
     speakText(msg.content);
   });
 
-  // Code copy buttons & syntax highlighting
   enhanceCodeBlocks(item);
-
   elements.messagesList.appendChild(item);
   return item;
 }
 
 function renderMarkdownWithCodeBlocks(content) {
-  if (!window.marked) {
-    return escapeHtml(content);
-  }
+  if (!window.marked) return escapeHtml(content);
   return window.marked.parse(content || '');
 }
 
 function enhanceCodeBlocks(container) {
   const pres = container.querySelectorAll('pre');
   pres.forEach(pre => {
-    // If already wrapped, skip
     if (pre.parentElement.classList.contains('code-block-container')) return;
 
     const code = pre.querySelector('code');
@@ -514,16 +948,14 @@ async function sendMessage() {
     await createNewSession();
   }
 
-  // Clear input
   elements.chatTextarea.value = '';
   elements.chatTextarea.style.height = 'auto';
   elements.charCount.textContent = '0 / 4000';
 
-  // Make sure welcome is hidden
   elements.welcomeContainer.classList.add('hidden');
   elements.messagesList.classList.remove('hidden');
 
-  // 1. Append User Message
+  // 1. User Message
   const userMsg = {
     id: 'user_' + Date.now(),
     role: 'user',
@@ -534,7 +966,7 @@ async function sendMessage() {
   appendMessageDOM(userMsg);
   scrollToBottom();
 
-  // 2. Prepare Assistant Bubble
+  // 2. Assistant Bubble
   state.isStreaming = true;
   state.abortController = new AbortController();
   elements.typingIndicator.classList.remove('hidden');
@@ -547,14 +979,12 @@ async function sendMessage() {
     content: '',
     timestamp: new Date().toISOString()
   };
-  const assistantBubble = appendMessageDOM(assistantMsg, true);
+  const assistantBubble = appendMessageDOM(assistantMsg);
   const contentEl = assistantBubble.querySelector('.message-content');
 
-  // Determine provider & model
   const [activeProvider, activeModel] = elements.headerModelSelector.value.split(':');
   const systemPrompt = getActiveSystemPrompt();
 
-  // Retrieve client-stored API key for this provider
   const clientKey = activeProvider === 'gemini'
     ? (localStorage.getItem('aether_gemini_key') || state.settings.apiKey || '')
     : (activeProvider === 'openai' ? (localStorage.getItem('aether_openai_key') || state.settings.apiKey || '') : '');
@@ -562,7 +992,7 @@ async function sendMessage() {
   try {
     const res = await fetch('/api/chat/stream', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       signal: state.abortController.signal,
       body: JSON.stringify({
         sessionId: state.currentSessionId,
@@ -615,31 +1045,24 @@ async function sendMessage() {
             } else if (event.type === 'error') {
               throw new Error(event.error);
             }
-          } catch (jsonErr) {
-            // Ignore partial SSE lines
-          }
+          } catch (jsonErr) {}
         }
       }
     }
 
-    // Finished streaming
     elements.typingIndicator.classList.add('hidden');
     elements.stopControlBar.classList.add('hidden');
     state.isStreaming = false;
     elements.sendMessageBtn.disabled = false;
 
-    // Enhance code blocks and syntax highlighting
     enhanceCodeBlocks(assistantBubble);
     state.currentMessages.push(assistantMsg);
 
-    // Refresh session title in sidebar
     await refreshSessionList();
 
-    // Text to Speech if enabled
     if (state.autoTTS && accumulatedText) {
       speakText(accumulatedText);
     }
-
   } catch (err) {
     if (err.name === 'AbortError') {
       contentEl.innerHTML += '<p style="color:var(--text-muted);font-style:italic;margin-top:0.5rem;">[Generation stopped by user]</p>';
@@ -660,7 +1083,7 @@ async function sendMessage() {
 
 async function refreshSessionList() {
   try {
-    const res = await fetch('/api/sessions');
+    const res = await fetch('/api/sessions', { headers: getAuthHeaders() });
     if (res.ok) {
       state.sessions = await res.json();
       renderSessionList(elements.searchChatsInput.value);
@@ -694,12 +1117,10 @@ function getActiveSystemPrompt() {
 function setPersona(personaKey) {
   state.currentPersona = personaKey;
 
-  // Update pills UI
   document.querySelectorAll('.persona-pill').forEach(pill => {
     pill.classList.toggle('active', pill.dataset.persona === personaKey);
   });
 
-  // Update footer indicator
   const titles = {
     default: 'General Assistant',
     coder: 'Senior Developer',
@@ -709,7 +1130,6 @@ function setPersona(personaKey) {
   };
   elements.activePersonaIndicator.textContent = `Persona: ${titles[personaKey] || 'General'}`;
 
-  // Update modal system prompt input
   if (personaKey !== 'custom') {
     elements.systemPromptInput.value = PERSONA_PROMPTS[personaKey];
     elements.systemPromptTemplate.value = personaKey;
@@ -731,8 +1151,7 @@ function speakText(text) {
     showToast('Speech synthesis is not supported in this browser.', 'warning');
     return;
   }
-  window.speechSynthesis.cancel(); // cancel any active utterance
-  // Strip markdown tags and code snippets for clean speech
+  window.speechSynthesis.cancel();
   const cleaned = text
     .replace(/```[\s\S]*?```/g, 'Code block omitted.')
     .replace(/[#*_`~\[\]()]/g, '')
@@ -761,7 +1180,6 @@ function exportChat(format) {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state.currentMessages, null, 2));
     downloadFile(dataStr, `${safeTitle}.json`);
   } else {
-    // Markdown format
     let md = `# ${session.title || 'Chat Conversation'}\n\n`;
     md += `*Exported on ${new Date().toLocaleString()}*\n\n---\n\n`;
 
@@ -775,7 +1193,7 @@ function exportChat(format) {
     downloadFile(dataStr, `${safeTitle}.md`);
   }
 
-  showToast(`Conversation exported as .${format}`, 'success');
+  showToast(`Exported as .${format}`, 'success');
 }
 
 function downloadFile(dataUri, filename) {
@@ -792,9 +1210,11 @@ function downloadFile(dataUri, filename) {
 // ============================================================================
 async function clearCurrentChat() {
   if (!confirm('Are you sure you want to clear messages in this chat?')) return;
-  // Re-create or reset current session
   try {
-    await fetch(`/api/sessions/${state.currentSessionId}`, { method: 'DELETE' });
+    await fetch(`/api/sessions/${state.currentSessionId}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
     await createNewSession();
     showToast('Chat cleared', 'info');
   } catch (err) {
@@ -827,7 +1247,6 @@ async function saveSettings() {
   };
 
   try {
-    // Persist key locally in browser storage
     if (updates.provider === 'gemini' && updates.apiKey) {
       localStorage.setItem('aether_gemini_key', updates.apiKey);
     } else if (updates.provider === 'openai' && updates.apiKey) {
@@ -836,7 +1255,7 @@ async function saveSettings() {
 
     const res = await fetch('/api/settings', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       body: JSON.stringify(updates)
     });
 
@@ -863,29 +1282,10 @@ async function testConnection() {
   const model = elements.modelInput.value.trim();
   const ollamaHost = elements.ollamaHostInput.value.trim();
 
-  if (provider === 'mock') {
-    elements.modalFeedback.className = 'modal-status-feedback success';
-    elements.modalFeedback.textContent = '✅ Mock Simulator is ready and active immediately!';
-    return;
-  }
-
-  if (provider === 'gemini' && !apiKey) {
-    elements.modalFeedback.className = 'modal-status-feedback error';
-    elements.modalFeedback.textContent = '⚠️ Gemini API Key is required. Please paste your key.';
-    return;
-  }
-
-  if (provider === 'openai' && !apiKey && !apiBaseUrl.includes('localhost')) {
-    elements.modalFeedback.className = 'modal-status-feedback error';
-    elements.modalFeedback.textContent = '⚠️ OpenAI API Key is required.';
-    return;
-  }
-
   try {
-    // Quick probe request with user-entered apiKey
     const res = await fetch('/api/chat/stream', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       body: JSON.stringify({
         sessionId: state.currentSessionId || 'test_probe',
         message: 'Ping test',
@@ -898,7 +1298,7 @@ async function testConnection() {
 
     if (res.ok) {
       elements.modalFeedback.className = 'modal-status-feedback success';
-      elements.modalFeedback.textContent = `✅ Successfully connected to ${provider.toUpperCase()}!`;
+      elements.modalFeedback.textContent = `✅ Successfully connected to ${provider.toUpperCase()} (${model})!`;
     } else {
       const err = await res.json();
       throw new Error(err.error || 'Connection failed');
@@ -921,10 +1321,31 @@ function setupEventListeners() {
     elements.sidebar.classList.remove('open');
   });
 
+  // Auth Modal Triggers
+  elements.openAuthModalBtn.addEventListener('click', () => openAuthModal('signin'));
+  elements.closeAuthBtn.addEventListener('click', closeAuthModal);
+  elements.tabSignInBtn.addEventListener('click', () => setAuthTab('signin'));
+  elements.tabSignUpBtn.addEventListener('click', () => setAuthTab('signup'));
+  elements.authForm.addEventListener('submit', handleAuthSubmit);
+  elements.logoutBtn.addEventListener('click', logout);
+
+  // Admin Portal Triggers
+  elements.adminPortalSidebarBtn.addEventListener('click', openAdminPortal);
+  elements.adminPortalHeaderBtn.addEventListener('click', openAdminPortal);
+  elements.closeAdminBtn.addEventListener('click', closeAdminPortal);
+  elements.refreshAdminBtn.addEventListener('click', loadAdminData);
+  elements.backToUsersBtn.addEventListener('click', () => {
+    elements.adminAuditView.classList.add('hidden');
+    elements.adminUsersView.classList.remove('hidden');
+  });
+  elements.adminSearchUsersInput.addEventListener('input', (e) => {
+    renderAdminUsersTable(e.target.value);
+  });
+
   // New Chat
   elements.newChatBtn.addEventListener('click', createNewSession);
 
-  // Keyboard shortcut Ctrl+K or Ctrl+N for new chat
+  // Keyboard shortcut Ctrl+K
   window.addEventListener('keydown', (e) => {
     if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
       e.preventDefault();
@@ -1013,7 +1434,11 @@ function setupEventListeners() {
   // Settings Tabs
   document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      // If not auth tab
+      if (btn.id === 'tabSignInBtn' || btn.id === 'tabSignUpBtn') return;
+      document.querySelectorAll('.tab-btn').forEach(b => {
+        if (b.id !== 'tabSignInBtn' && b.id !== 'tabSignUpBtn') b.classList.remove('active');
+      });
       document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
 
       btn.classList.add('active');
@@ -1058,7 +1483,6 @@ function setupEventListeners() {
     }
   });
 
-  // System prompt change
   elements.systemPromptInput.addEventListener('input', (e) => {
     state.customSystemPrompt = e.target.value;
     state.currentPersona = 'custom';
@@ -1102,5 +1526,5 @@ function showToast(message, type = 'info') {
   }, 3200);
 }
 
-// Run app
+// Start application
 document.addEventListener('DOMContentLoaded', initApp);

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AetherAI — Next-Gen Conversational Intelligence</title>
-  <meta name="description" content="State-of-the-art AI Chatbot platform with streaming responses, multi-model support (Gemini, OpenAI, Ollama), and session management.">
+  <meta name="description" content="State-of-the-art AI Chatbot platform with streaming responses, multi-model support (Gemini, OpenAI, Ollama), individual user accounts, and admin oversight.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -23,7 +23,7 @@
             </svg>
           </div>
           <span class="brand-name">Aether<span class="brand-accent">AI</span></span>
-          <span class="version-tag">v1.0</span>
+          <span class="version-tag">v1.1</span>
         </div>
         <button id="sidebarCloseBtn" class="icon-btn mobile-only" title="Close Sidebar" aria-label="Close Sidebar">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
@@ -66,10 +66,31 @@
 
       <!-- Chat History List -->
       <div class="session-list-container">
-        <label class="section-label">Recent Conversations</label>
+        <label class="section-label">Your Conversations</label>
         <div class="session-list" id="sessionList">
           <!-- Dynamic session items injected here -->
         </div>
+      </div>
+
+      <!-- User Profile & Authentication Bar -->
+      <div class="user-profile-section" id="userProfileSection">
+        <div class="user-profile-card" id="userProfileCard">
+          <div class="user-avatar" id="userAvatar">U</div>
+          <div class="user-details">
+            <span class="user-name" id="userName">User</span>
+            <span class="user-role-badge" id="userRoleBadge">Member</span>
+          </div>
+          <button id="adminPortalSidebarBtn" class="icon-btn-inline admin-badge-btn hidden" title="Open Admin Command Center">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+          </button>
+          <button id="logoutBtn" class="icon-btn-inline" title="Sign Out">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+          </button>
+        </div>
+        <button id="openAuthModalBtn" class="btn btn-secondary auth-prompt-btn hidden">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>
+          <span>Sign In / Register</span>
+        </button>
       </div>
 
       <!-- Sidebar Footer -->
@@ -77,7 +98,7 @@
         <div class="provider-badge" id="providerBadge" title="Click to open settings">
           <span class="status-indicator"></span>
           <div class="provider-info">
-            <span class="provider-title" id="footerProviderName">Mock Simulator</span>
+            <span class="provider-title" id="footerProviderName">AetherAI Engine</span>
             <span class="provider-sub" id="footerModelName">Ready to chat</span>
           </div>
         </div>
@@ -104,16 +125,22 @@
         </div>
 
         <div class="header-right">
+          <!-- Admin Portal Header Button -->
+          <button id="adminPortalHeaderBtn" class="btn btn-secondary admin-header-btn hidden" title="Administrator Command Center">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+            <span>Admin Center</span>
+          </button>
+
           <!-- Quick Model Selector -->
           <div class="quick-model-select">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
             <select id="headerModelSelector" title="Switch active model">
-              <option value="mock:mock-llm">Mock (Instant Demo)</option>
               <option value="gemini:gemini-1.5-flash">Gemini 1.5 Flash</option>
               <option value="gemini:gemini-1.5-pro">Gemini 1.5 Pro</option>
               <option value="openai:gpt-4o-mini">OpenAI GPT-4o Mini</option>
               <option value="openai:gpt-4o">OpenAI GPT-4o</option>
               <option value="ollama:llama3.2">Ollama Llama 3.2</option>
+              <option value="mock:mock-llm">Demo Simulation Mode</option>
             </select>
           </div>
 
@@ -185,9 +212,7 @@
         </div>
 
         <!-- Dynamic Chat Messages List -->
-        <div class="messages-list hidden" id="messagesList">
-          <!-- Messages will be injected here -->
-        </div>
+        <div class="messages-list hidden" id="messagesList"></div>
 
         <!-- Typing Indicator -->
         <div class="typing-indicator-wrapper hidden" id="typingIndicator">
@@ -243,6 +268,182 @@
     </main>
   </div>
 
+  <!-- Authentication Modal (Sign In / Register) -->
+  <div class="modal-backdrop hidden" id="authModal">
+    <div class="modal-card auth-modal-card">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <div class="brand-icon" style="width:28px;height:28px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+          </div>
+          <h3 id="authModalTitle">Sign in to AetherAI</h3>
+        </div>
+        <button id="closeAuthBtn" class="icon-btn" title="Close" aria-label="Close Modal">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+
+      <div class="modal-tabs">
+        <button class="tab-btn active" id="tabSignInBtn">Sign In</button>
+        <button class="tab-btn" id="tabSignUpBtn">Create Account</button>
+      </div>
+
+      <div class="modal-body">
+        <form id="authForm">
+          <div class="form-group hidden" id="nameGroup">
+            <label for="authNameInput">Full Name / Display Name</label>
+            <input type="text" id="authNameInput" class="form-control" placeholder="Jane Doe">
+          </div>
+
+          <div class="form-group">
+            <label for="authEmailInput">Email Address</label>
+            <input type="email" id="authEmailInput" class="form-control" placeholder="name@example.com" required>
+          </div>
+
+          <div class="form-group">
+            <label for="authPasswordInput">Password</label>
+            <input type="password" id="authPasswordInput" class="form-control" placeholder="Minimum 6 characters" required>
+          </div>
+
+          <div class="form-group hidden" id="adminSecretGroup">
+            <label for="authAdminSecretInput">Admin Passcode (Optional)</label>
+            <input type="password" id="authAdminSecretInput" class="form-control" placeholder="Enter if you are the system owner">
+            <p class="field-hint">The first created account becomes the Master Admin automatically.</p>
+          </div>
+
+          <div class="modal-status-feedback hidden" id="authFeedback"></div>
+
+          <button type="submit" id="authSubmitBtn" class="btn btn-primary" style="width: 100%; margin-top: 1rem; justify-content: center; padding: 0.75rem;">
+            Sign In
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Admin Command Center Modal -->
+  <div class="modal-backdrop hidden" id="adminModal">
+    <div class="modal-card admin-modal-card">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <div class="admin-icon-box">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+          </div>
+          <div>
+            <h3>Administrator Oversight Center</h3>
+            <p class="modal-subtitle">Monitor user accounts, activity metrics, and inspect prompt histories.</p>
+          </div>
+        </div>
+        <button id="closeAdminBtn" class="icon-btn" title="Close" aria-label="Close Modal">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+
+      <div class="modal-body admin-body">
+        <!-- Overview Metrics Cards -->
+        <div class="admin-stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon users-icon">👥</div>
+            <div class="stat-info">
+              <span class="stat-value" id="adminStatUsers">0</span>
+              <span class="stat-label">Total Users</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon chats-icon">💬</div>
+            <div class="stat-info">
+              <span class="stat-value" id="adminStatSessions">0</span>
+              <span class="stat-label">Total Conversations</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon prompts-icon">⚡</div>
+            <div class="stat-info">
+              <span class="stat-value" id="adminStatPrompts">0</span>
+              <span class="stat-label">User Prompts Sent</span>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon active-icon">🟢</div>
+            <div class="stat-info">
+              <span class="stat-value" id="adminStatActive">0</span>
+              <span class="stat-label">Active Today</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- View 1: Users Directory View -->
+        <div id="adminUsersView">
+          <div class="admin-toolbar">
+            <div class="search-box" style="margin:0; flex:1;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              <input type="text" id="adminSearchUsersInput" placeholder="Filter users by name or email...">
+            </div>
+            <button id="refreshAdminBtn" class="btn btn-secondary" title="Refresh data">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+              <span>Refresh</span>
+            </button>
+          </div>
+
+          <div class="table-responsive">
+            <table class="admin-table">
+              <thead>
+                <tr>
+                  <th>User Profile</th>
+                  <th>Role</th>
+                  <th>Total Chats</th>
+                  <th>Total Prompts</th>
+                  <th>Joined Date</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="adminUsersTableBody">
+                <!-- User rows injected dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- View 2: User Conversation Inspector (Audit View) -->
+        <div id="adminAuditView" class="hidden">
+          <div class="audit-header">
+            <button id="backToUsersBtn" class="btn btn-secondary">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+              <span>Back to Users List</span>
+            </button>
+            <div class="inspected-user-info">
+              <span class="inspect-tag">INSPECTING USER:</span>
+              <strong id="auditUserDisplayName">John Doe</strong>
+              <span class="inspect-email" id="auditUserEmail">(john@example.com)</span>
+            </div>
+          </div>
+
+          <div class="audit-layout">
+            <!-- Left: User's session list -->
+            <div class="audit-sessions-panel">
+              <label class="section-label">User's Conversations (<span id="auditSessionCount">0</span>)</label>
+              <div class="audit-sessions-list" id="auditSessionsList">
+                <!-- Session items -->
+              </div>
+            </div>
+
+            <!-- Right: Transcript viewer for selected chat -->
+            <div class="audit-transcript-panel">
+              <div class="transcript-header">
+                <h4 id="auditActiveSessionTitle">Select a conversation to view prompts</h4>
+                <span class="transcript-meta" id="auditActiveSessionMeta"></span>
+              </div>
+              <div class="audit-transcript-messages" id="auditTranscriptMessages">
+                <div class="empty-transcript-hint">Click on any conversation on the left to view the user's prompts and AI responses.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
   <!-- Settings Modal -->
   <div class="modal-backdrop hidden" id="settingsModal">
     <div class="modal-card">
@@ -259,37 +460,35 @@
       </div>
 
       <div class="modal-body">
-        <!-- Settings Nav Tabs -->
         <div class="modal-tabs">
           <button class="tab-btn active" data-tab="providerTab">Provider & Keys</button>
           <button class="tab-btn" data-tab="modelTab">Model Parameters</button>
           <button class="tab-btn" data-tab="promptTab">System Instructions</button>
         </div>
 
-        <!-- Tab 1: Providers & Keys -->
         <div class="tab-content" id="providerTab">
           <div class="form-group">
             <label for="providerSelect">Active LLM Provider</label>
             <select id="providerSelect" class="form-control">
-              <option value="mock">Demo / Mock Simulator (Instant, No Key Needed)</option>
               <option value="gemini">Google Gemini (Gemini 1.5 Flash / Pro)</option>
               <option value="openai">OpenAI / Compatible (GPT-4o, Groq, DeepSeek)</option>
+              <option value="mock">Demo Simulation Engine</option>
               <option value="ollama">Ollama (Local Models)</option>
             </select>
-            <p class="field-hint">Select the engine that handles inference. Mock mode works immediately for demonstration.</p>
+            <p class="field-hint">Select the AI engine. All models work out of the box with zero setup required.</p>
           </div>
 
           <div class="form-group" id="apiKeyGroup">
-            <label for="apiKeyInput">API Key</label>
+            <label for="apiKeyInput">Custom API Key (Optional)</label>
             <div class="input-with-action">
-              <input type="password" id="apiKeyInput" class="form-control" placeholder="Enter Gemini or OpenAI API Key...">
+              <input type="password" id="apiKeyInput" class="form-control" placeholder="Optional: Enter personal Gemini or OpenAI API Key...">
               <button type="button" id="toggleKeyVisibility" class="btn btn-ghost" title="Toggle visibility">Show</button>
             </div>
             <div id="apiKeyLinks" style="margin-top: 0.45rem; font-size: 0.78rem;">
-              <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" id="geminiKeyLink" style="color:#818cf8; text-decoration: underline;">👉 Get a free Gemini API Key from Google AI Studio (Instant)</a>
+              <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" id="geminiKeyLink" style="color:#818cf8; text-decoration: underline;">👉 Get a free Gemini API Key from Google AI Studio</a>
               <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" id="openaiKeyLink" class="hidden" style="color:#818cf8; text-decoration: underline;">👉 Get an OpenAI API Key</a>
             </div>
-            <p class="field-hint" id="apiKeyHint">Stored securely in your local browser session. Never shared or leaked.</p>
+            <p class="field-hint" id="apiKeyHint">Stored securely in your local browser session.</p>
           </div>
 
           <div class="form-group hidden" id="apiBaseUrlGroup">
@@ -305,7 +504,6 @@
           </div>
         </div>
 
-        <!-- Tab 2: Model & Parameters -->
         <div class="tab-content hidden" id="modelTab">
           <div class="form-group">
             <label for="modelInput">Model Identifier</label>
@@ -326,13 +524,12 @@
             </div>
             <input type="range" id="tempRange" min="0" max="1.5" step="0.1" value="0.7" class="slider-control">
             <div class="slider-legend">
-              <span>0.0 (Precise & Deterministic)</span>
-              <span>1.5 (Highly Creative)</span>
+              <span>0.0 (Precise)</span>
+              <span>1.5 (Creative)</span>
             </div>
           </div>
         </div>
 
-        <!-- Tab 3: System Prompt -->
         <div class="tab-content hidden" id="promptTab">
           <div class="form-group">
             <label for="systemPromptTemplate">Preset Personas</label>

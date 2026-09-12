@@ -1,6 +1,25 @@
 {
   "sessions": [
     {
+      "id": "sess_1789241771870_ucxgo",
+      "userId": "usr_1789241771816_dxxtz",
+      "title": "My Coding Questions",
+      "systemPrompt": "",
+      "model": "gemini-1.5-flash",
+      "provider": "mock",
+      "createdAt": "2026-09-12T19:36:11.870Z",
+      "updatedAt": "2026-09-12T19:36:19.986Z"
+    },
+    {
+      "id": "sess_1789241431644_7zf2e",
+      "title": "New Chat",
+      "systemPrompt": "",
+      "model": "mock-llm",
+      "provider": "mock",
+      "createdAt": "2026-09-12T19:30:31.644Z",
+      "updatedAt": "2026-09-12T19:30:31.644Z"
+    },
+    {
       "id": "sess_1789238756039_fgdtv",
       "title": "Test Session",
       "systemPrompt": "",
@@ -26,6 +45,39 @@
         "content": "Hello! 👋 I am your AI Chatbot assistant.\n\nI am currently running in **Demo / Mock Simulation Mode**, ready to test out of the box!\n\nHere are a few things you can do:\n1. **Chat right away** to test real-time streaming, UI formatting, code blocks, and conversation persistence.\n2. **Switch to live LLM providers**: Click the **Settings ⚙️** icon in the header to enter your **Gemini**, **OpenAI**, or **Ollama** credentials.\n3. **Change Personas**: Switch between *Helpful Assistant*, *Senior Developer*, *Creative Writer*, and more!\n\nHow can I help you today?",
         "timestamp": "2026-09-12T18:45:59.337Z"
       }
+    ],
+    "sess_1789241431644_7zf2e": [],
+    "sess_quick_test": [
+      {
+        "id": "msg_1789241431646_e65sw",
+        "sessionId": "sess_quick_test",
+        "role": "user",
+        "content": "Write a quick python script for web scraping",
+        "timestamp": "2026-09-12T19:30:31.646Z"
+      },
+      {
+        "id": "msg_1789241439791_73ysb",
+        "sessionId": "sess_quick_test",
+        "role": "assistant",
+        "content": "Here is a clean, robust **Python** implementation addressing your request:\n\n```python\nimport asyncio\nimport aiohttp\nfrom typing import List, Dict, Any\n\nasync def fetch_item(session: aiohttp.ClientSession, url: str) -> Dict[str, Any]:\n    \"\"\"Fetch JSON data asynchronously with error handling.\"\"\"\n    try:\n        async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as response:\n            if response.status == 200:\n                return await response.json()\n            return {\"error\": f\"HTTP {response.status}\", \"url\": url}\n    except Exception as exc:\n        return {\"error\": str(exc), \"url\": url}\n\nasync def run_pipeline(urls: List[str]) -> List[Dict[str, Any]]:\n    \"\"\"Concurrent worker executing batch requests.\"\"\"\n    async with aiohttp.ClientSession() as session:\n        tasks = [fetch_item(session, url) for url in urls]\n        results = await asyncio.gather(*tasks, return_exceptions=True)\n        return [r for r in results if not isinstance(r, Exception)]\n\nif __name__ == \"__main__\":\n    test_urls = [\"https://api.github.com\", \"https://httpbin.org/get\"]\n    data = asyncio.run(run_pipeline(test_urls))\n    print(f\"Successfully processed {len(data)} endpoints.\")\n```\n\n### Key Architectural Highlights:\n1. **Asynchronous Concurrency**: Uses `asyncio.gather` to parallelize network I/O.\n2. **Resilience**: Configured with timeouts and localized error guards.\n3. **Type Annotations**: Clean PEP 484 type hints for maintainability.",
+        "timestamp": "2026-09-12T19:30:39.791Z"
+      }
+    ],
+    "sess_1789241771870_ucxgo": [
+      {
+        "id": "msg_1789241771886_t2xem",
+        "sessionId": "sess_1789241771870_ucxgo",
+        "role": "user",
+        "content": "Explain binary search in Python",
+        "timestamp": "2026-09-12T19:36:11.886Z"
+      },
+      {
+        "id": "msg_1789241779986_kl26j",
+        "sessionId": "sess_1789241771870_ucxgo",
+        "role": "assistant",
+        "content": "Here is a clean, robust **Python** implementation addressing your request:\n\n```python\nimport asyncio\nimport aiohttp\nfrom typing import List, Dict, Any\n\nasync def fetch_item(session: aiohttp.ClientSession, url: str) -> Dict[str, Any]:\n    \"\"\"Fetch JSON data asynchronously with error handling.\"\"\"\n    try:\n        async with session.get(url, timeout=aiohttp.ClientTimeout(total=10)) as response:\n            if response.status == 200:\n                return await response.json()\n            return {\"error\": f\"HTTP {response.status}\", \"url\": url}\n    except Exception as exc:\n        return {\"error\": str(exc), \"url\": url}\n\nasync def run_pipeline(urls: List[str]) -> List[Dict[str, Any]]:\n    \"\"\"Concurrent worker executing batch requests.\"\"\"\n    async with aiohttp.ClientSession() as session:\n        tasks = [fetch_item(session, url) for url in urls]\n        results = await asyncio.gather(*tasks, return_exceptions=True)\n        return [r for r in results if not isinstance(r, Exception)]\n\nif __name__ == \"__main__\":\n    test_urls = [\"https://api.github.com\", \"https://httpbin.org/get\"]\n    data = asyncio.run(run_pipeline(test_urls))\n    print(f\"Successfully processed {len(data)} endpoints.\")\n```\n\n### Key Architectural Highlights:\n1. **Asynchronous Concurrency**: Uses `asyncio.gather` to parallelize network I/O.\n2. **Resilience**: Configured with timeouts and localized error guards.\n3. **Type Annotations**: Clean PEP 484 type hints for maintainability.",
+        "timestamp": "2026-09-12T19:36:19.986Z"
+      }
     ]
   },
   "settings": {
@@ -35,5 +87,37 @@
     "defaultModel": "gemini-1.5-flash",
     "temperature": 1.5,
     "ollamaHost": "http://localhost:11434"
+  },
+  "users": [
+    {
+      "id": "usr_1789241771732_8m43l",
+      "email": "admin@aether.ai",
+      "name": "Master Admin",
+      "passwordHash": "116774dc28d5dd809ae2bf37bf9e4240d2d483144bdb7323dddcbf71cc00c9edde5241088aac1b0f877f2aaf5c91f53fe08e4f8a9ee0e9530ef07563f346b5ea",
+      "salt": "338bb3ff010c38ed2965cb70b94eb487",
+      "role": "admin",
+      "createdAt": "2026-09-12T19:36:11.732Z",
+      "lastLoginAt": "2026-09-12T19:36:11.770Z"
+    },
+    {
+      "id": "usr_1789241771816_dxxtz",
+      "email": "john@example.com",
+      "name": "John Doe",
+      "passwordHash": "918e447fbd1600fb77b4afac2ac5c0089a5d0243d89c79300437af8799691396f5a513eba090ce7130ee524d30c1c75ff92335b9334ba3e5f3f019a519c66503",
+      "salt": "ed38c56c42f3068d31934bf99a5cc98e",
+      "role": "user",
+      "createdAt": "2026-09-12T19:36:11.816Z",
+      "lastLoginAt": "2026-09-12T19:36:11.853Z"
+    }
+  ],
+  "tokens": {
+    "tok_a96009f1604b512099c26403b2414c1f18e2449e7b0e1dfc5991ce744cbd8fd3": {
+      "userId": "usr_1789241771732_8m43l",
+      "expiresAt": 1791833771770
+    },
+    "tok_70f11bbbb155cb718298aaf73e0d66030e4a7944a3cffe897751b595022e769a": {
+      "userId": "usr_1789241771816_dxxtz",
+      "expiresAt": 1791833771853
+    }
   }
 }
