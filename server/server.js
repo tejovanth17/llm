@@ -93,7 +93,7 @@ app.delete('/api/sessions/:id', (req, res) => {
 
 // Chat Streaming endpoint via Server-Sent Events (SSE)
 app.post('/api/chat/stream', async (req, res) => {
-  const { sessionId, message, provider, model, systemPrompt, temperature } = req.body;
+  const { sessionId, message, provider, model, systemPrompt, temperature, apiKey: clientApiKey } = req.body;
 
   if (!sessionId) {
     return res.status(400).json({ error: 'sessionId is required' });
@@ -126,8 +126,8 @@ app.post('/api/chat/stream', async (req, res) => {
   const activeSystemPrompt = systemPrompt !== undefined ? systemPrompt : (session.systemPrompt || '');
   const activeTemp = temperature !== undefined ? temperature : (settings.temperature || 0.7);
 
-  // Determine API key
-  let apiKey = settings.apiKey;
+  // Determine API key: client-provided -> server settings -> environment variables
+  let apiKey = clientApiKey || settings.apiKey;
   if (!apiKey) {
     if (activeProvider === 'gemini') apiKey = process.env.GEMINI_API_KEY;
     else if (activeProvider === 'openai') apiKey = process.env.OPENAI_API_KEY;

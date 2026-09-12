@@ -156,6 +156,18 @@ function updateFooterBadge() {
 }
 
 function toggleProviderFieldVisibility(provider) {
+  const geminiLink = document.getElementById('geminiKeyLink');
+  const openaiLink = document.getElementById('openaiKeyLink');
+  if (geminiLink) geminiLink.classList.toggle('hidden', provider !== 'gemini');
+  if (openaiLink) openaiLink.classList.toggle('hidden', provider !== 'openai');
+
+  // Populate stored key for this provider
+  if (provider === 'gemini') {
+    elements.apiKeyInput.value = localStorage.getItem('aether_gemini_key') || state.settings.apiKey || '';
+  } else if (provider === 'openai') {
+    elements.apiKeyInput.value = localStorage.getItem('aether_openai_key') || state.settings.apiKey || '';
+  }
+
   if (provider === 'mock') {
     elements.apiKeyGroup.classList.add('hidden');
     elements.apiBaseUrlGroup.classList.add('hidden');
@@ -542,6 +554,11 @@ async function sendMessage() {
   const [activeProvider, activeModel] = elements.headerModelSelector.value.split(':');
   const systemPrompt = getActiveSystemPrompt();
 
+  // Retrieve client-stored API key for this provider
+  const clientKey = activeProvider === 'gemini'
+    ? (localStorage.getItem('aether_gemini_key') || state.settings.apiKey || '')
+    : (activeProvider === 'openai' ? (localStorage.getItem('aether_openai_key') || state.settings.apiKey || '') : '');
+
   try {
     const res = await fetch('/api/chat/stream', {
       method: 'POST',
@@ -552,6 +569,7 @@ async function sendMessage() {
         message: text,
         provider: activeProvider,
         model: activeModel,
+        apiKey: clientKey,
         systemPrompt,
         temperature: parseFloat(state.settings.temperature) || 0.7
       })
@@ -809,6 +827,13 @@ async function saveSettings() {
   };
 
   try {
+    // Persist key locally in browser storage
+    if (updates.provider === 'gemini' && updates.apiKey) {
+      localStorage.setItem('aether_gemini_key', updates.apiKey);
+    } else if (updates.provider === 'openai' && updates.apiKey) {
+      localStorage.setItem('aether_openai_key', updates.apiKey);
+    }
+
     const res = await fetch('/api/settings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -857,7 +882,7 @@ async function testConnection() {
   }
 
   try {
-    // Quick probe request
+    // Quick probe request with user-entered apiKey
     const res = await fetch('/api/chat/stream', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -866,6 +891,7 @@ async function testConnection() {
         message: 'Ping test',
         provider,
         model,
+        apiKey,
         temperature: 0.5
       })
     });
@@ -973,7 +999,20 @@ function setupEventListeners() {
     state.settings.provider = provider;
     state.settings.defaultModel = model;
     updateFooterBadge();
-    showToast(`Switched model to ${model}`, 'info');
+
+    const hasKey = (provider === 'gemini' && (localStorage.getItem('aether_gemini_key') || state.settings.apiKey || state.settings.hasApiKey)) ||
+                   (provider === 'openai' && (localStorage.getItem('aether_openai_key') || state.settings.apiKey || state.settings.hasApiKey)) ||
+                   (provider === 'mock');
+
+    if ((provider === 'gemini' || provider === 'openai') && !hasKey) {
+      showToast(`ℹ️ ${model} requires an API key. Opening Settings to configure it...`, 'warning');
+      elements.providerSelect.value = provider;
+      elements.modelInput.value = model;
+      toggleProviderFieldVisibility(provider);
+      openSettingsModal();
+    } else {
+      showToast(`Switched model to ${model}`, 'info');
+    }
   });
 
   // Open / Close Settings Modal

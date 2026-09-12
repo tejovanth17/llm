@@ -285,7 +285,11 @@
               <input type="password" id="apiKeyInput" class="form-control" placeholder="Enter Gemini or OpenAI API Key...">
               <button type="button" id="toggleKeyVisibility" class="btn btn-ghost" title="Toggle visibility">Show</button>
             </div>
-            <p class="field-hint" id="apiKeyHint">Stored securely in your local environment. Never shared or leaked.</p>
+            <div id="apiKeyLinks" style="margin-top: 0.45rem; font-size: 0.78rem;">
+              <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" id="geminiKeyLink" style="color:#818cf8; text-decoration: underline;">👉 Get a free Gemini API Key from Google AI Studio (Instant)</a>
+              <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" id="openaiKeyLink" class="hidden" style="color:#818cf8; text-decoration: underline;">👉 Get an OpenAI API Key</a>
+            </div>
+            <p class="field-hint" id="apiKeyHint">Stored securely in your local browser session. Never shared or leaked.</p>
           </div>
 
           <div class="form-group hidden" id="apiBaseUrlGroup">

@@ -11,13 +11,27 @@ async function streamGemini({ apiKey, model, messages, systemPrompt, temperature
   const geminiModel = model || 'gemini-1.5-flash';
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:streamGenerateContent?alt=sse&key=${apiKey}`;
 
-  // Format messages for Gemini API
+  // Format messages for Gemini API ensuring strict alternating turns
   const contents = [];
   for (const m of messages) {
-    contents.push({
-      role: m.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: m.content }]
-    });
+    const role = m.role === 'assistant' ? 'model' : 'user';
+    if (contents.length > 0 && contents[contents.length - 1].role === role) {
+      contents[contents.length - 1].parts[0].text += '\n' + m.content;
+    } else {
+      contents.push({
+        role,
+        parts: [{ text: m.content }]
+      });
+    }
+  }
+
+  // Gemini requires the first turn to be 'user'
+  while (contents.length > 0 && contents[0].role !== 'user') {
+    contents.shift();
+  }
+
+  if (contents.length === 0) {
+    contents.push({ role: 'user', parts: [{ text: 'Hello' }] });
   }
 
   const payload = {
