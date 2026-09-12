@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+client/node_modules/
+server/node_modules/
+
+# Production build output
+client/dist/
+
+# Environment and sensitive keys
+.env
+*.env
+server/.env
+
+# Logs and temp files
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Database data (local test storage)
+server/data/*.tmp
+
+# OS files
+.DS_Store
+Thumbs.db

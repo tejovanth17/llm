@@ -1,0 +1,19 @@
+{
+  "name": "aether-ai-chatbot",
+  "version": "1.0.0",
+  "description": "Full-stack AI Chatbot System with Streaming, Sessions, and Multi-Provider Support",
+  "scripts": {
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "build": "npm --prefix client run build",
+    "start": "node server/server.js",
+    "server": "node server/server.js",
+    "client": "npm --prefix client run dev",
+    "install:all": "npm --prefix server install && npm --prefix client install",
+    "docker:build": "docker build -t aether-ai-chatbot:latest .",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

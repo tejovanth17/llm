@@ -1,0 +1,39 @@
+{
+  "sessions": [
+    {
+      "id": "sess_1789238756039_fgdtv",
+      "title": "Test Session",
+      "systemPrompt": "",
+      "model": "gemini-1.5-flash",
+      "provider": "mock",
+      "createdAt": "2026-09-12T18:45:56.039Z",
+      "updatedAt": "2026-09-12T18:45:59.337Z"
+    }
+  ],
+  "messages": {
+    "sess_1789238756039_fgdtv": [
+      {
+        "id": "msg_1789238756052_cfabg",
+        "sessionId": "sess_1789238756039_fgdtv",
+        "role": "user",
+        "content": "Hello AI",
+        "timestamp": "2026-09-12T18:45:56.052Z"
+      },
+      {
+        "id": "msg_1789238759337_o4pri",
+        "sessionId": "sess_1789238756039_fgdtv",
+        "role": "assistant",
+        "content": "Hello! 👋 I am your AI Chatbot assistant.\n\nI am currently running in **Demo / Mock Simulation Mode**, ready to test out of the box!\n\nHere are a few things you can do:\n1. **Chat right away** to test real-time streaming, UI formatting, code blocks, and conversation persistence.\n2. **Switch to live LLM providers**: Click the **Settings ⚙️** icon in the header to enter your **Gemini**, **OpenAI**, or **Ollama** credentials.\n3. **Change Personas**: Switch between *Helpful Assistant*, *Senior Developer*, *Creative Writer*, and more!\n\nHow can I help you today?",
+        "timestamp": "2026-09-12T18:45:59.337Z"
+      }
+    ]
+  },
+  "settings": {
+    "provider": "mock",
+    "apiKey": "",
+    "apiBaseUrl": "",
+    "defaultModel": "gemini-1.5-flash",
+    "temperature": 1.5,
+    "ollamaHost": "http://localhost:11434"
+  }
+}

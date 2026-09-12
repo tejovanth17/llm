@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AetherAI — Next-Gen Conversational Intelligence</title>
+  <meta name="description" content="State-of-the-art AI Chatbot platform with streaming responses, multi-model support (Gemini, OpenAI, Ollama), and session management.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body class="theme-dark">
+  <div class="app-layout">
+    <!-- Collapsible Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="brand">
+          <div class="brand-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+            </svg>
+          </div>
+          <span class="brand-name">Aether<span class="brand-accent">AI</span></span>
+          <span class="version-tag">v1.0</span>
+        </div>
+        <button id="sidebarCloseBtn" class="icon-btn mobile-only" title="Close Sidebar" aria-label="Close Sidebar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+
+      <!-- Action: New Chat -->
+      <div class="sidebar-actions">
+        <button id="newChatBtn" class="btn btn-primary new-chat-btn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          <span>New Chat</span>
+          <span class="shortcut-pill">Ctrl+K</span>
+        </button>
+      </div>
+
+      <!-- Personas Bar -->
+      <div class="persona-section">
+        <label class="section-label">Persona Mode</label>
+        <div class="persona-pills" id="personaPills">
+          <button class="persona-pill active" data-persona="default">
+            <span class="pill-dot"></span>General
+          </button>
+          <button class="persona-pill" data-persona="coder">
+            <span class="pill-dot"></span>Developer
+          </button>
+          <button class="persona-pill" data-persona="writer">
+            <span class="pill-dot"></span>Creative
+          </button>
+          <button class="persona-pill" data-persona="concise">
+            <span class="pill-dot"></span>Concise
+          </button>
+        </div>
+      </div>
+
+      <!-- Search Sessions -->
+      <div class="search-box">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <input type="text" id="searchChatsInput" placeholder="Search conversations...">
+      </div>
+
+      <!-- Chat History List -->
+      <div class="session-list-container">
+        <label class="section-label">Recent Conversations</label>
+        <div class="session-list" id="sessionList">
+          <!-- Dynamic session items injected here -->
+        </div>
+      </div>
+
+      <!-- Sidebar Footer -->
+      <div class="sidebar-footer">
+        <div class="provider-badge" id="providerBadge" title="Click to open settings">
+          <span class="status-indicator"></span>
+          <div class="provider-info">
+            <span class="provider-title" id="footerProviderName">Mock Simulator</span>
+            <span class="provider-sub" id="footerModelName">Ready to chat</span>
+          </div>
+        </div>
+        <button id="openSettingsBtn" class="icon-btn" title="Settings" aria-label="Settings">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Chat Content -->
+    <main class="main-content">
+      <!-- Header Bar -->
+      <header class="chat-header">
+        <div class="header-left">
+          <button id="sidebarToggleBtn" class="icon-btn" title="Toggle Sidebar" aria-label="Toggle Sidebar">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+          </button>
+          <div class="session-meta">
+            <h1 class="session-title" id="currentSessionTitle" title="Click to rename">New Chat</h1>
+            <button id="renameSessionBtn" class="icon-btn-inline" title="Rename Title">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="header-right">
+          <!-- Quick Model Selector -->
+          <div class="quick-model-select">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+            <select id="headerModelSelector" title="Switch active model">
+              <option value="mock:mock-llm">Mock (Instant Demo)</option>
+              <option value="gemini:gemini-1.5-flash">Gemini 1.5 Flash</option>
+              <option value="gemini:gemini-1.5-pro">Gemini 1.5 Pro</option>
+              <option value="openai:gpt-4o-mini">OpenAI GPT-4o Mini</option>
+              <option value="openai:gpt-4o">OpenAI GPT-4o</option>
+              <option value="ollama:llama3.2">Ollama Llama 3.2</option>
+            </select>
+          </div>
+
+          <!-- TTS Audio Toggle -->
+          <button id="ttsToggleBtn" class="icon-btn" title="Toggle Auto Read-Aloud" aria-label="Toggle Read Aloud">
+            <svg id="ttsIconOff" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>
+            <svg id="ttsIconOn" class="hidden" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+          </button>
+
+          <!-- Export Conversation -->
+          <div class="dropdown-container">
+            <button id="exportMenuBtn" class="icon-btn" title="Export Conversation" aria-label="Export Chat">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            </button>
+            <div class="dropdown-menu hidden" id="exportDropdown">
+              <button id="exportMdBtn">Export as Markdown (.md)</button>
+              <button id="exportJsonBtn">Export as JSON (.json)</button>
+            </div>
+          </div>
+
+          <!-- Clear Messages in Current Session -->
+          <button id="clearChatBtn" class="icon-btn" title="Clear Current Chat" aria-label="Clear Chat">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- Messages Viewport -->
+      <section class="chat-viewport" id="chatViewport">
+        <!-- Welcome Screen when chat is empty -->
+        <div class="welcome-container" id="welcomeContainer">
+          <div class="ambient-glow"></div>
+          <div class="welcome-badge">
+            <span class="sparkle">✨</span> Antigravity AI Engine
+          </div>
+          <h2 class="welcome-heading">Where curiosity meets intelligence.</h2>
+          <p class="welcome-subtext">Ask questions, write and debug code, synthesize ideas, or brainstorm next-gen products with multi-model streaming.</p>
+
+          <div class="starter-grid">
+            <div class="starter-card" data-prompt="Explain the difference between SSE (Server-Sent Events) and WebSockets with code examples.">
+              <div class="card-icon">⚡</div>
+              <div class="card-content">
+                <h4>SSE vs WebSockets</h4>
+                <p>Architectural breakdown, differences, and practical code.</p>
+              </div>
+            </div>
+            <div class="starter-card" data-prompt="Write a clean Python script using asyncio to fetch and parse data concurrently.">
+              <div class="card-icon">🐍</div>
+              <div class="card-content">
+                <h4>Async Python Pipeline</h4>
+                <p>High-performance concurrent worker implementation.</p>
+              </div>
+            </div>
+            <div class="starter-card" data-prompt="What are 3 cutting-edge business ideas combining agentic workflows with developer tools?">
+              <div class="card-icon">💡</div>
+              <div class="card-content">
+                <h4>Agentic AI Ideas</h4>
+                <p>Actionable startup strategies for developer platforms.</p>
+              </div>
+            </div>
+            <div class="starter-card" data-prompt="Help me design a responsive dark-mode dashboard UI with glassmorphism in Vanilla CSS.">
+              <div class="card-icon">🎨</div>
+              <div class="card-content">
+                <h4>Glassmorphic UI Design</h4>
+                <p>Modern CSS styling guidelines, color systems, and tokens.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dynamic Chat Messages List -->
+        <div class="messages-list hidden" id="messagesList">
+          <!-- Messages will be injected here -->
+        </div>
+
+        <!-- Typing Indicator -->
+        <div class="typing-indicator-wrapper hidden" id="typingIndicator">
+          <div class="typing-avatar">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+          </div>
+          <div class="typing-bubble">
+            <span class="dot"></span>
+            <span class="dot"></span>
+            <span class="dot"></span>
+            <span class="typing-text">AetherAI is crafting a response...</span>
+          </div>
+        </div>
+
+        <!-- Stop Generation Button -->
+        <div class="stop-control-bar hidden" id="stopControlBar">
+          <button id="stopGenerationBtn" class="btn btn-secondary stop-btn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"></rect></svg>
+            <span>Stop Generating</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- Bottom Chat Input Area -->
+      <footer class="chat-input-area">
+        <div class="input-glass-container">
+          <div class="input-meta-bar">
+            <span class="active-persona-indicator" id="activePersonaIndicator">Persona: General Assistant</span>
+            <span class="char-count" id="charCount">0 / 4000</span>
+          </div>
+
+          <div class="input-row">
+            <textarea
+              id="chatTextarea"
+              rows="1"
+              placeholder="Ask anything or use prompts above... (Shift + Enter for new line)"
+              maxlength="4000"
+            ></textarea>
+            
+            <button id="sendMessageBtn" class="send-btn" title="Send message (Enter)" aria-label="Send message">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+            </button>
+          </div>
+
+          <div class="input-footer-hint">
+            <span>AetherAI can make mistakes. Verify important code and information.</span>
+          </div>
+        </div>
+      </footer>
+    </main>
+  </div>
+
+  <!-- Settings Modal -->
+  <div class="modal-backdrop hidden" id="settingsModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <div class="modal-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+          </div>
+          <h3>System Settings & LLM Configuration</h3>
+        </div>
+        <button id="closeSettingsBtn" class="icon-btn" title="Close" aria-label="Close Modal">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <!-- Settings Nav Tabs -->
+        <div class="modal-tabs">
+          <button class="tab-btn active" data-tab="providerTab">Provider & Keys</button>
+          <button class="tab-btn" data-tab="modelTab">Model Parameters</button>
+          <button class="tab-btn" data-tab="promptTab">System Instructions</button>
+        </div>
+
+        <!-- Tab 1: Providers & Keys -->
+        <div class="tab-content" id="providerTab">
+          <div class="form-group">
+            <label for="providerSelect">Active LLM Provider</label>
+            <select id="providerSelect" class="form-control">
+              <option value="mock">Demo / Mock Simulator (Instant, No Key Needed)</option>
+              <option value="gemini">Google Gemini (Gemini 1.5 Flash / Pro)</option>
+              <option value="openai">OpenAI / Compatible (GPT-4o, Groq, DeepSeek)</option>
+              <option value="ollama">Ollama (Local Models)</option>
+            </select>
+            <p class="field-hint">Select the engine that handles inference. Mock mode works immediately for demonstration.</p>
+          </div>
+
+          <div class="form-group" id="apiKeyGroup">
+            <label for="apiKeyInput">API Key</label>
+            <div class="input-with-action">
+              <input type="password" id="apiKeyInput" class="form-control" placeholder="Enter Gemini or OpenAI API Key...">
+              <button type="button" id="toggleKeyVisibility" class="btn btn-ghost" title="Toggle visibility">Show</button>
+            </div>
+            <p class="field-hint" id="apiKeyHint">Stored securely in your local environment. Never shared or leaked.</p>
+          </div>
+
+          <div class="form-group hidden" id="apiBaseUrlGroup">
+            <label for="apiBaseUrlInput">Custom API Base URL (Optional)</label>
+            <input type="text" id="apiBaseUrlInput" class="form-control" placeholder="https://api.openai.com/v1 (or Groq, Together, DeepSeek)">
+            <p class="field-hint">Set this if you are using OpenAI-compatible endpoints like Groq, Together, or LocalAI.</p>
+          </div>
+
+          <div class="form-group hidden" id="ollamaHostGroup">
+            <label for="ollamaHostInput">Ollama Host Address</label>
+            <input type="text" id="ollamaHostInput" class="form-control" placeholder="http://localhost:11434">
+            <p class="field-hint">Default is http://localhost:11434. Make sure Ollama is running locally.</p>
+          </div>
+        </div>
+
+        <!-- Tab 2: Model & Parameters -->
+        <div class="tab-content hidden" id="modelTab">
+          <div class="form-group">
+            <label for="modelInput">Model Identifier</label>
+            <input type="text" id="modelInput" class="form-control" placeholder="e.g. gemini-1.5-flash, gpt-4o-mini, llama3.2">
+            <div class="model-quick-chips">
+              <span class="quick-chip" data-val="gemini-1.5-flash">gemini-1.5-flash</span>
+              <span class="quick-chip" data-val="gemini-1.5-pro">gemini-1.5-pro</span>
+              <span class="quick-chip" data-val="gpt-4o-mini">gpt-4o-mini</span>
+              <span class="quick-chip" data-val="gpt-4o">gpt-4o</span>
+              <span class="quick-chip" data-val="llama3.2">llama3.2</span>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <div class="slider-header">
+              <label for="tempRange">Temperature (Creativity)</label>
+              <span class="slider-val" id="tempVal">0.7</span>
+            </div>
+            <input type="range" id="tempRange" min="0" max="1.5" step="0.1" value="0.7" class="slider-control">
+            <div class="slider-legend">
+              <span>0.0 (Precise & Deterministic)</span>
+              <span>1.5 (Highly Creative)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 3: System Prompt -->
+        <div class="tab-content hidden" id="promptTab">
+          <div class="form-group">
+            <label for="systemPromptTemplate">Preset Personas</label>
+            <select id="systemPromptTemplate" class="form-control">
+              <option value="default">Default: Helpful & Intelligent AI Assistant</option>
+              <option value="coder">Senior Software Engineer & Code Reviewer</option>
+              <option value="writer">Creative Copywriter & Content Strategist</option>
+              <option value="concise">Concise & Direct Technical Mentor</option>
+              <option value="custom">Custom (Write your own below)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="systemPromptInput">System Instruction Prompt</label>
+            <textarea id="systemPromptInput" rows="5" class="form-control" placeholder="Define how the AI should behave, speak, and format its responses..."></textarea>
+          </div>
+        </div>
+
+        <div class="modal-status-feedback hidden" id="modalFeedback"></div>
+      </div>
+
+      <div class="modal-footer">
+        <button id="testConnectionBtn" class="btn btn-secondary">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
+          <span>Test Connection</span>
+        </button>
+        <div class="footer-btn-group">
+          <button id="cancelSettingsBtn" class="btn btn-ghost">Cancel</button>
+          <button id="saveSettingsBtn" class="btn btn-primary">Save Changes</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- External libraries and app script -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/15.0.7/marked.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
